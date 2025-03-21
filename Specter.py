@@ -149,6 +149,7 @@ def display_correlation_graphs(df):
     """Displays various correlation graphs."""
     st.subheader("Correlation and Distribution Graphs")
     max_funding = df['Total Funding Amount (in USD)'].max()
+    max_web_visits = df['Web Visits'].max()
 
     st.write("Funding Amount vs. Employee Count (Colored by Growth Stage)")
     fig1, ax1 = plt.subplots(figsize=(10, 6))
@@ -186,6 +187,8 @@ def display_correlation_graphs(df):
     fig5, ax5 = plt.subplots(figsize=(10, 6))
     sns.scatterplot(x='Web Visits', y='Total Funding Amount (in USD)', data=df, ax=ax5)
     ax5.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: flexible_formatter(x, pos, max_funding)))
+    ax5.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: flexible_formatter(x, pos, max_web_visits)))
+    
     ax5.set_ylabel('Total Funding Amount')
     st.pyplot(fig5)
 
@@ -224,9 +227,11 @@ def display_growth_data(df):
     """Displays data related to 'Growth'."""
     growth_columns = [col for col in df.columns if "Growth" in col]
     web_visits_columns = [col for col in df.columns if "Web Visits" in col]
+    linkedin_columns = [col for col in df.columns if "LinkedIn - " in col and "URL" not in col]
 
-    if not growth_columns and not web_visits_columns:
-        st.write("No columns found containing 'Growth' or 'Web Visits' in their name.")
+
+    if not growth_columns and not web_visits_columns and not linkedin_columns:
+        st.write("No columns found containing 'Growth', 'Web Visits' or 'LinkedIn - ' in their name.")
         return
 
     if growth_columns:
@@ -269,7 +274,6 @@ def display_growth_data(df):
         
         # Select only the columns with the calculated values
         line_graph_data = web_visits_df.drop(['Company Name', 'Website'], axis=1)
-        # line_graph_data = web_visits_df[[str(i) for i in range(len(web_visits_columns)) if str(i) in web_visits_df.columns or i == 0]]
         line_graph_data.index = web_visits_df['Company Name']
         
         # Transpose the DataFrame to have months as columns
@@ -283,6 +287,58 @@ def display_growth_data(df):
         ax_line.set_title('Web Visits Over Time')
         ax_line.set_xlabel('Month (Relative)')
         ax_line.set_ylabel('Web Visits')
+        ax_line.legend()
+        ax_line.grid(True)
+        st.pyplot(fig_line)
+    
+    if linkedin_columns:
+        linkedin_df = df[['Company Name', 'LinkedIn - URL'] + linkedin_columns].copy()
+        print(linkedin_columns)
+        rename_dict = {'LinkedIn - Followers': '0'}
+        for i, col in enumerate(linkedin_columns):
+            if i > 0:
+                if i == 7:
+                    rename_dict[col] = '12'
+                elif i == 8:
+                    rename_dict[col] = '24'
+                else:
+                    rename_dict[col] = str(i)
+        linkedin_df.rename(columns=rename_dict, inplace=True)
+        
+        print(linkedin_df)
+        # Replace % relative data with actual numbers of followers
+        for index, row in linkedin_df.iterrows():
+            base_value = row['0']
+            for i in range(1, len(linkedin_columns)):
+                col_name = list(rename_dict.values())[i]
+                growth_absolute = float(row[col_name])
+                if pd.isna(growth_absolute) or growth_absolute == 0.0:
+                    linkedin_df.loc[index, col_name] = 0.0
+                else:
+                    try:
+                        linkedin_df.loc[index, col_name] = base_value - growth_absolute
+                    except (TypeError, ZeroDivisionError):
+                        linkedin_df.loc[index, col_name] = 0.0
+        st.subheader("LinkedIn Data")
+        st.dataframe(linkedin_df)
+        # Line Graph
+        st.subheader("LinkedIn Line Graph")
+        
+        # Select only the columns with the calculated values
+        line_graph_data = linkedin_df.drop(['Company Name', 'LinkedIn - URL'], axis=1)
+        line_graph_data.index = linkedin_df['Company Name']
+                
+        # Transpose the DataFrame to have months as columns
+        line_graph_data = line_graph_data.transpose()
+        
+        # Plot the line graph
+        fig_line, ax_line = plt.subplots(figsize=(14, 6))
+        for company in line_graph_data.columns:
+            ax_line.plot(line_graph_data.index, line_graph_data[company], marker='o', label=company)
+           
+        ax_line.set_title('Linked In Followers Over Time')
+        ax_line.set_xlabel('Month (Relative)')
+        ax_line.set_ylabel('LinkedIn Followers')
         ax_line.legend()
         ax_line.grid(True)
         st.pyplot(fig_line)
