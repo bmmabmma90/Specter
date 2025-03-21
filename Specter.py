@@ -241,33 +241,35 @@ def display_growth_data(df):
         rename_dict = {'Web Visits': '0'}
         for i, col in enumerate(web_visits_columns):
             if i > 0:
-                # if i == 7:
-                #     rename_dict[col] = '12'
-                # elif i == 8:
-                #     rename_dict[col] = '24'
-                # else:
-                rename_dict[col] = str(i)
+                if i == 7:
+                    rename_dict[col] = '12'
+                elif i == 8:
+                    rename_dict[col] = '24'
+                else:
+                    rename_dict[col] = str(i)
         web_visits_df.rename(columns=rename_dict, inplace=True)
         
-        # Create 'data' row
+        # Replace % relative data with actual numbers of visitors
         for index, row in web_visits_df.iterrows():
             base_value = row['0']
             for i in range(1, len(web_visits_columns)):
-                growth_percentage = float(row[str(i)])/100
+                col_name = list(rename_dict.values())[i]
+                growth_percentage = float(row[col_name])/100
                 if pd.isna(growth_percentage) or growth_percentage == 0.0:
-                    web_visits_df.loc[index, str(i)] = 0.0
+                    web_visits_df.loc[index, col_name] = 0.0
                 else:
                     try:
-                        web_visits_df.loc[index, str(i)] = base_value / (1 + growth_percentage)
+                        web_visits_df.loc[index, col_name] = base_value / (1 + growth_percentage)
                     except (TypeError, ZeroDivisionError):
-                        web_visits_df.loc[index, str(i)] = 0.0
+                        web_visits_df.loc[index, col_name] = 0.0
         st.subheader("Web Visits Data")
         st.dataframe(web_visits_df)
         # Line Graph
         st.subheader("Web Visits Line Graph")
         
         # Select only the columns with the calculated values
-        line_graph_data = web_visits_df[[str(i) for i in range(len(web_visits_columns)) if str(i) in web_visits_df.columns or i == 0]]
+        line_graph_data = web_visits_df.drop(['Company Name', 'Website'], axis=1)
+        # line_graph_data = web_visits_df[[str(i) for i in range(len(web_visits_columns)) if str(i) in web_visits_df.columns or i == 0]]
         line_graph_data.index = web_visits_df['Company Name']
         
         # Transpose the DataFrame to have months as columns
