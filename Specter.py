@@ -293,7 +293,6 @@ def display_growth_data(df):
     
     if linkedin_columns:
         linkedin_df = df[['Company Name', 'LinkedIn - URL'] + linkedin_columns].copy()
-        print(linkedin_columns)
         rename_dict = {'LinkedIn - Followers': '0'}
         for i, col in enumerate(linkedin_columns):
             if i > 0:
@@ -305,7 +304,6 @@ def display_growth_data(df):
                     rename_dict[col] = str(i)
         linkedin_df.rename(columns=rename_dict, inplace=True)
         
-        print(linkedin_df)
         # Replace % relative data with actual numbers of followers
         for index, row in linkedin_df.iterrows():
             base_value = row['0']
