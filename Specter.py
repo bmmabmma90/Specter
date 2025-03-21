@@ -368,6 +368,8 @@ def main():
 
     else:
         st.write("Upload your data file and then select what data you want to see from the sidebar menu.")
+        st.write("You can see all the data Specter holds on a given company (Raw Data), summary data by company (Company Data), but also comparative graphs for Web/LinkedIn (Web and LinkedIn Data) and various graphs for Specter populalarity (Popularity) and others (Graphs)")
+        
         # File upload
         uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
         if uploaded_file is not None:
@@ -379,28 +381,26 @@ def main():
 
     if df is not None:
         # Sidebar menu
-        menu = ["Interactive Table", "Bubble Plot", "Social Media Data", "Correlation Graphs", "Company Data", "Raw Data", "Growth Data"]
+        menu = ["Interactive Table", "Raw Data", "Company Data", "Popularity", "Web and LinkedIn Data", "Graphs"]
         choice = st.sidebar.selectbox("Select an option:", menu)
 
         if choice == "Interactive Table":
             st.subheader("Interactive Table")
             display_interactive_table(df)
-        elif choice == "Bubble Plot":
-            st.subheader("Bubble Plot")
+        elif choice == "Popularity":
+            st.subheader("Popularity (as measured by Specter) vs Funding bubble plot")
             display_bubble_plot(df)
-        elif choice == "Social Media Data":
-            st.subheader("Social Media Data")
+        elif choice == "Web and LinkedIn Data":
+            st.subheader("Web, LinkedIn and Twitter Data")
             plot_sorted_bar_chart(df, 'Web Visits', 'Web Visits by Company (Relative Percentage)', 'green')
             plot_sorted_bar_chart(df, 'LinkedIn - Followers', 'LinkedIn Followers by Company (Relative Percentage)', 'blue')
             plot_sorted_bar_chart(df, 'Twitter - Followers', 'Twitter Followers by Company (Relative Percentage)', 'orange')
-        elif choice == "Correlation Graphs":
+            display_growth_data(df_original)
+        elif choice == "Graphs":
             display_correlation_graphs(df)
         elif choice == "Company Data":
             st.subheader("Company Data")
             display_company_data(df)
-        elif choice == "Growth Data":
-            st.subheader("Growth Data")
-            display_growth_data(df_original)
         elif choice == "Raw Data":
             st.subheader("Raw Data")
             if df_original is not None:
