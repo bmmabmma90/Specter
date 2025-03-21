@@ -223,13 +223,67 @@ def display_raw_data(df):
 def display_growth_data(df):
     """Displays data related to 'Growth'."""
     growth_columns = [col for col in df.columns if "Growth" in col]
+    web_visits_columns = [col for col in df.columns if "Web Visits" in col]
 
-    if not growth_columns:
-        st.write("No columns found containing 'Growth' in their name.")
-    else:
+    if not growth_columns and not web_visits_columns:
+        st.write("No columns found containing 'Growth' or 'Web Visits' in their name.")
+        return
+
+    if growth_columns:
         growth_df = df[['Company Name', 'Website', 'Employee Count', 'LinkedIn - Followers', 'Twitter - Followers'] + growth_columns]
         grouped_growth_data = growth_df.groupby(['Website', 'Employee Count', 'LinkedIn - Followers', 'Twitter - Followers'])[growth_columns].agg(lambda x: ', '.join(map(str, x))).reset_index()
         st.dataframe(grouped_growth_data, hide_index=True)
+
+    if web_visits_columns:
+        web_visits_df = df[['Company Name', 'Website'] + web_visits_columns].copy()
+        
+        # Rename columns but remember to replace 7 with 12 and 8 with 24
+        rename_dict = {'Web Visits': '0'}
+        for i, col in enumerate(web_visits_columns):
+            if i > 0:
+                # if i == 7:
+                #     rename_dict[col] = '12'
+                # elif i == 8:
+                #     rename_dict[col] = '24'
+                # else:
+                rename_dict[col] = str(i)
+        web_visits_df.rename(columns=rename_dict, inplace=True)
+        
+        # Create 'data' row
+        for index, row in web_visits_df.iterrows():
+            base_value = row['0']
+            for i in range(1, len(web_visits_columns)):
+                growth_percentage = float(row[str(i)])/100
+                if pd.isna(growth_percentage) or growth_percentage == 0.0:
+                    web_visits_df.loc[index, str(i)] = 0.0
+                else:
+                    try:
+                        web_visits_df.loc[index, str(i)] = base_value / (1 + growth_percentage)
+                    except (TypeError, ZeroDivisionError):
+                        web_visits_df.loc[index, str(i)] = 0.0
+        st.subheader("Web Visits Data")
+        st.dataframe(web_visits_df)
+        # Line Graph
+        st.subheader("Web Visits Line Graph")
+        
+        # Select only the columns with the calculated values
+        line_graph_data = web_visits_df[[str(i) for i in range(len(web_visits_columns)) if str(i) in web_visits_df.columns or i == 0]]
+        line_graph_data.index = web_visits_df['Company Name']
+        
+        # Transpose the DataFrame to have months as columns
+        line_graph_data = line_graph_data.transpose()
+        
+        # Plot the line graph
+        fig_line, ax_line = plt.subplots(figsize=(14, 6))
+        for company in line_graph_data.columns:
+            ax_line.plot(line_graph_data.index, line_graph_data[company], marker='o', label=company)
+           
+        ax_line.set_title('Web Visits Over Time')
+        ax_line.set_xlabel('Month (Relative)')
+        ax_line.set_ylabel('Web Visits')
+        ax_line.legend()
+        ax_line.grid(True)
+        st.pyplot(fig_line)
 
 # --- Main App ---
 
@@ -243,8 +297,9 @@ def main():
 
     if test_mode:
         st.write("Running in test mode...")
+        TEST_FILE_NAME = "specter-company-signals.csv"
         downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_path = os.path.join(downloads_path, "specter-company-signals.csv")
+        file_path = os.path.join(downloads_path, TEST_FILE_NAME)
         st.write("Attempting to load", file_path)
 
         if os.path.exists(file_path):
