@@ -1,9 +1,12 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from streamlit.components.v1 import html
+import tempfile
 import seaborn as sns
 from io import StringIO
 import os
+import base64
 
 # --- Streamlit Configuration ---
 st.set_page_config(layout="wide")  # Make the window wide
@@ -71,6 +74,9 @@ def flexible_formatter(x, pos, max_value):
 
 def display_interactive_table(df):
     """Displays an interactive table with formatted numbers."""
+    if df is None:
+        st.error("No data to display in interactive table.")
+        return
     df_display = df.copy()
     df_display.sort_values(by='Total Funding Amount (in USD)', ascending=False, inplace=True)
     df_display['Total Funding Amount (in USD)'] = df_display['Total Funding Amount (in USD)'].apply(format_number)
@@ -98,6 +104,7 @@ def display_interactive_table(df):
         hide_index=True,
         disabled=df_display.columns
     )
+    return df_display
 # --- Plotting ---
 
 def display_bubble_plot(df):
@@ -359,10 +366,11 @@ def main():
         st.write("Attempting to load", file_path)
 
         if os.path.exists(file_path):
-            df = load_and_clean_data(file_path)
+            df, df_original = load_and_clean_data(file_path)
         else:
             st.error(f"Test file not found at: {file_path}")
             df = None
+            df_original = None
 
     else:
         st.write("Upload your data file and then select what data you want to see from the sidebar menu.")
@@ -372,7 +380,11 @@ def main():
         uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
         if uploaded_file is not None:
             # Directly use StringIO for the uploaded file
-            df, df_original = load_and_clean_data(uploaded_file)
+            df, df_original = load_and_clean_data(StringIO(uploaded_file.getvalue().decode("utf-8")))
+            
+            # Store the uploaded file in session state
+            st.session_state.uploaded_file = uploaded_file
+
         else:
             df = None
             df_original = None
@@ -383,8 +395,46 @@ def main():
         choice = st.sidebar.selectbox("Select an option:", menu)
 
         if choice == "Interactive Table":
-            st.subheader("Interactive Table")
-            display_interactive_table(df)
+            st.subheader("Interactive Table")    
+            interactive_table_df = display_interactive_table(df)
+            # --- Shareable Link and Data ---
+            if 'uploaded_file' in st.session_state:
+                
+                # Create a download link for the uploaded file
+                csv = st.session_state.uploaded_file.getvalue().decode("utf-8")
+                b64 = base64.b64encode(csv.encode()).decode()  # Encode to base64
+                href = f'<a href="data:file/csv;base64,{b64}" download="data.csv">Download Uploaded Data</a>'
+                st.markdown(href, unsafe_allow_html=True)
+                
+                # Create a link to the app with the uploaded file
+                app_link = f"{st.secrets['app_url']}?uploaded_file={st.session_state.uploaded_file.name}"
+                
+                # Create a button to generate the shareable page
+                if st.button("Generate Shareable Page"):
+                    # Generate the HTML for the shareable page
+                    shareable_html = generate_shareable_page(interactive_table_df, st.session_state.uploaded_file, app_link)
+                    
+                    # Display the shareable page in a new tab
+                    st.markdown(f'<a href="data:text/html;charset=utf-8,{shareable_html}" target="_blank">Open Shareable Page</a>', unsafe_allow_html=True)
+                    
+                    # Display the shareable page in a text area
+                    st.text_area("Shareable Page HTML", shareable_html, height=300)
+
+                    # Create a temporary file to save the HTML
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp_file:
+                        tmp_file.write(shareable_html)
+                        tmp_file_path = tmp_file.name
+
+                    # Create a download button for the HTML file
+                    with open(tmp_file_path, "r") as f:
+                        html_content = f.read()
+                    b64 = base64.b64encode(html_content.encode()).decode()
+                    href = f'<a href="data:file/html;base64,{b64}" download="shareable_page.html">Download Shareable Page as HTML</a>'
+                    st.markdown(href, unsafe_allow_html=True)
+
+                    os.remove(tmp_file_path)
+
+
         elif choice == "Popularity":
             st.subheader("Popularity (as measured by Specter) vs Funding bubble plot")
             display_bubble_plot(df)
@@ -405,6 +455,46 @@ def main():
                 display_raw_data(df_original)
             else:
                 st.error("Original Data not available")
+
+def generate_shareable_page(df, uploaded_file, app_link):
+    """Generates the HTML for the shareable page."""
+    
+    # Convert the DataFrame to HTML
+    table_html = df.to_html(index=False, escape=False)
+    
+    # Create a download link for the uploaded file
+    csv = uploaded_file.getvalue().decode("utf-8")
+#    b64 = base64.b64encode(csv.encode()).decode()  # Encode to base64
+#    download_link = f'<a href="data:file/csv;base64,{b64}" download="data.csv">Download Uploaded Data</a>'
+    
+    # Create the full HTML content
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Specter Data Analysis - Shared View</title>
+        <style>
+            table {{
+                border-collapse: collapse;
+                width: 100%;
+            }}
+            th, td {{
+                text-align: left;
+                padding: 8px;
+                border: 1px solid #ddd;
+            }}
+            tr:nth-child(even) {{background-color: #f2f2f2;}}
+        </style>
+    </head>
+    <body>
+        <h1>Specter Data Analysis - Interactive Table</h1>
+        {table_html}
+        <br>
+        <a href="{app_link}" target="_blank"><button>View Full Analysis</button></a>
+    </body>
+    </html>
+    """
+    return html
 
 if __name__ == "__main__":
     main()
