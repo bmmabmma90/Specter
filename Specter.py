@@ -7,16 +7,22 @@ import seaborn as sns
 from io import StringIO
 import os
 import base64
+import requests
+from io import BytesIO
 
 # --- Streamlit Configuration ---
 st.set_page_config(layout="wide")  # Make the window wide
 
 # --- Data Loading and Cleaning ---
 
-def load_and_clean_data(file_path):
-    """Loads and cleans the data from the given file path."""
+def load_and_clean_data(file_path_or_buffer):
+    """Loads and cleans the data from the given file path or buffer."""
     try:
-        df = pd.read_csv(file_path, encoding='utf-8')
+        if isinstance(file_path_or_buffer, str):
+            df = pd.read_csv(file_path_or_buffer, encoding='utf-8')
+        else:
+            df = pd.read_csv(file_path_or_buffer, encoding='utf-8')
+
         df_original = df.copy()  # Store the original data
  
         relevant_columns = ['Rank', 'Company Name', 'Website', 'Founded Date', 'Total Funding Amount (in USD)',
@@ -356,21 +362,29 @@ def main():
 
     # Get query parameters
     query_params = st.query_params
-    test_mode = query_params.get("test", "false").lower() == "true"
+    google_drive_url = query_params.get("google_drive_url")
 
-    if test_mode:
-        st.write("Running in test mode...")
-        TEST_FILE_NAME = "specter-company-signals.csv"
-        downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_path = os.path.join(downloads_path, TEST_FILE_NAME)
-        st.write("Attempting to load", file_path)
+    if google_drive_url:
+        st.write("Attempting to load data from Google Drive URL...")
+        try:
+            # Extract the file ID from the Google Drive URL
+            file_id = google_drive_url.split('/d/')[1].split('/')[0]
+            
+            # Construct the direct download URL
+            download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            
+            # Download the file content
+            response = requests.get(download_url)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            
+            # Load the data from the downloaded content
+            df, df_original = load_and_clean_data(BytesIO(response.content))
+            
+            st.success("Data loaded successfully from Google Drive.")
 
-        if os.path.exists(file_path):
-            df, df_original = load_and_clean_data(file_path)
-        else:
-            st.error(f"Test file not found at: {file_path}")
-            df = None
-            df_original = None
+        except Exception as e:
+            st.error(f"Error loading data from Google Drive: {e}")
+           
 
     else:
         st.write("Upload your data file and then select what data you want to see from the sidebar menu.")
