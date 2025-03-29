@@ -386,11 +386,14 @@ def main():
             st.success("Data loaded successfully from Google Drive.")
             
             # Update the query parameters with the Google Drive URL
-            st.query_params["google_drive_url"] = google_drive_url_input
+            query_params["google_drive_url"] = google_drive_url_input
             
             # Display the shareable URL
-            current_url = st.experimental_get_query_params()
-            shareable_url = f"{st.secrets['app_url']}?{urllib.parse.urlencode(current_url)}"
+            #current_url = st.experimental_get_query_params()
+            app_url = "https://spectercompare.streamlit.app"
+            shareable_url = f"{app_url}?{urllib.parse.urlencode(query_params)}"
+  
+ #           shareable_url = f"{st.secrets['app_url']}?{urllib.parse.urlencode(current_url)}"
             st.write(f"Shareable URL: {shareable_url}")
         except Exception as e:
             st.error(f"Error loading data from Google Drive: {e}")
@@ -409,6 +412,10 @@ def main():
             
             # Store the uploaded file in session state
             st.session_state.uploaded_file = uploaded_file
+            
+            # Clear the google_drive_url from the query params if a file is uploaded
+            if "google_drive_url" in query_params:
+                del query_params["google_drive_url"]
 
         else:
             df = None
