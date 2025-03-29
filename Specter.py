@@ -364,11 +364,14 @@ def main():
     query_params = st.query_params
     google_drive_url = query_params.get("google_drive_url")
 
-    if google_drive_url:
+    # Input for Google Drive URL
+    google_drive_url_input = st.text_input("Or, enter a Google Drive URL:", value=google_drive_url if google_drive_url else "")
+
+    if google_drive_url_input:
         st.write("Attempting to load data from Google Drive URL...")
         try:
             # Extract the file ID from the Google Drive URL
-            file_id = google_drive_url.split('/d/')[1].split('/')[0]
+            file_id = google_drive_url_input.split('/d/')[1].split('/')[0]
             
             # Construct the direct download URL
             download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
@@ -381,10 +384,18 @@ def main():
             df, df_original = load_and_clean_data(BytesIO(response.content))
             
             st.success("Data loaded successfully from Google Drive.")
-
+            
+            # Update the query parameters with the Google Drive URL
+            st.query_params["google_drive_url"] = google_drive_url_input
+            
+            # Display the shareable URL
+            current_url = st.experimental_get_query_params()
+            shareable_url = f"{st.secrets['app_url']}?{urllib.parse.urlencode(current_url)}"
+            st.write(f"Shareable URL: {shareable_url}")
         except Exception as e:
             st.error(f"Error loading data from Google Drive: {e}")
-           
+            df = None
+            df_original = None
 
     else:
         st.write("Upload your data file and then select what data you want to see from the sidebar menu.")
