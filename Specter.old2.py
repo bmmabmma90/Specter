@@ -9,7 +9,7 @@ import os
 import base64
 import requests
 from io import BytesIO
-import urllib.parse
+import urllib
 
 # --- Streamlit Configuration ---
 st.set_page_config(layout="wide")  # Make the window wide
@@ -25,10 +25,10 @@ def load_and_clean_data(file_path_or_buffer):
             df = pd.read_csv(file_path_or_buffer, encoding='utf-8')
 
         df_original = df.copy()  # Store the original data
-
+ 
         relevant_columns = ['Rank', 'Company Name', 'Website', 'Founded Date', 'Total Funding Amount (in USD)',
                             'Employee Count', 'HQ Location', 'Growth Stage', 'Web Visits', 'LinkedIn - Followers',
-                            'Twitter - Followers', 'Reported Traction Highlights', 'Investors']
+                            'Twitter - Followers', 'Reported Traction Highlights', 'Investors' ]
         df_cleaned = df.copy()
         df_cleaned = df_cleaned[relevant_columns]
 
@@ -91,11 +91,11 @@ def display_interactive_table(df):
     df_display["HQ Location"] = df_display["HQ Location"].apply(extract_last_part)
 
     df_display.rename(columns={
-        'Founded Date': 'Founded',
-        'Total Funding Amount (in USD)': 'Funding (USD)',
-        'Employee Count': 'Employees',
-        'LinkedIn - Followers': 'LinkedIn',
-        'Twitter - Followers': 'Twitter'
+      'Founded Date': 'Founded',
+      'Total Funding Amount (in USD)': 'Funding (USD)',
+      'Employee Count': 'Employees',
+      'LinkedIn - Followers' : 'LinkedIn',
+      'Twitter - Followers' : 'Twitter'
     }, inplace=True)
 
     st.data_editor(
@@ -112,7 +112,6 @@ def display_interactive_table(df):
         disabled=df_display.columns
     )
     return df_display
-
 # --- Plotting ---
 
 def display_bubble_plot(df):
@@ -127,8 +126,8 @@ def display_bubble_plot(df):
 
     for i in range(final_data.shape[0]):
         ax.text(final_data['Rank'].iloc[i], final_data['Total Funding Amount (in USD)'].iloc[i],
-                f"{final_data['Company Name'].iloc[i]} ({final_data['Founded Date'].iloc[i]}) Visits:{final_data['Web Visits'].iloc[i]}",
-                fontsize=8)
+                 f"{final_data['Company Name'].iloc[i]} ({final_data['Founded Date'].iloc[i]}) Visits:{final_data['Web Visits'].iloc[i]}",
+                 fontsize=8)
 
     ax.set_title('Total Funding vs Rank with Bubble Sizes based on Employee Count')
     ax.set_xlabel('Rank')
@@ -155,7 +154,7 @@ def plot_sorted_bar_chart(df, column_name, title, color):
     for bar in bars:
         yval = bar.get_height()
         ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.01 * max_value,
-                f'{sorted_df["Relative Percentage"].iloc[bars.index(bar)]:.1f}%', ha='center', va='bottom', fontsize=8)
+                 f'{sorted_df["Relative Percentage"].iloc[bars.index(bar)]:.1f}%', ha='center', va='bottom', fontsize=8)
 
     plt.tight_layout()
     st.pyplot(fig)
@@ -203,7 +202,7 @@ def display_correlation_graphs(df):
     sns.scatterplot(x='Web Visits', y='Total Funding Amount (in USD)', data=df, ax=ax5)
     ax5.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: flexible_formatter(x, pos, max_funding)))
     ax5.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: flexible_formatter(x, pos, max_web_visits)))
-
+    
     ax5.set_ylabel('Total Funding Amount')
     st.pyplot(fig5)
 
@@ -244,6 +243,7 @@ def display_growth_data(df):
     web_visits_columns = [col for col in df.columns if "Web Visits" in col]
     linkedin_columns = [col for col in df.columns if "LinkedIn - " in col and "URL" not in col]
 
+
     if not growth_columns and not web_visits_columns and not linkedin_columns:
         st.write("No columns found containing 'Growth', 'Web Visits' or 'LinkedIn - ' in their name.")
         return
@@ -255,7 +255,7 @@ def display_growth_data(df):
 
     if web_visits_columns:
         web_visits_df = df[['Company Name', 'Website'] + web_visits_columns].copy()
-
+        
         # Rename columns but remember to replace 7 with 12 and 8 with 24
         rename_dict = {'Web Visits': '0'}
         for i, col in enumerate(web_visits_columns):
@@ -267,13 +267,13 @@ def display_growth_data(df):
                 else:
                     rename_dict[col] = str(i)
         web_visits_df.rename(columns=rename_dict, inplace=True)
-
+        
         # Replace % relative data with actual numbers of visitors
         for index, row in web_visits_df.iterrows():
             base_value = row['0']
             for i in range(1, len(web_visits_columns)):
                 col_name = list(rename_dict.values())[i]
-                growth_percentage = float(row[col_name]) / 100
+                growth_percentage = float(row[col_name])/100
                 if pd.isna(growth_percentage) or growth_percentage == 0.0:
                     web_visits_df.loc[index, col_name] = 0.0
                 else:
@@ -285,26 +285,26 @@ def display_growth_data(df):
         st.dataframe(web_visits_df)
         # Line Graph
         st.subheader("Web Visits Line Graph")
-
+        
         # Select only the columns with the calculated values
         line_graph_data = web_visits_df.drop(['Company Name', 'Website'], axis=1)
         line_graph_data.index = web_visits_df['Company Name']
-
+        
         # Transpose the DataFrame to have months as columns
         line_graph_data = line_graph_data.transpose()
-
+        
         # Plot the line graph
         fig_line, ax_line = plt.subplots(figsize=(14, 6))
         for company in line_graph_data.columns:
             ax_line.plot(line_graph_data.index, line_graph_data[company], marker='o', label=company)
-
+           
         ax_line.set_title('Web Visits Over Time')
         ax_line.set_xlabel('Month (Relative)')
         ax_line.set_ylabel('Web Visits')
         ax_line.legend()
         ax_line.grid(True)
         st.pyplot(fig_line)
-
+    
     if linkedin_columns:
         linkedin_df = df[['Company Name', 'LinkedIn - URL'] + linkedin_columns].copy()
         rename_dict = {'LinkedIn - Followers': '0'}
@@ -317,7 +317,7 @@ def display_growth_data(df):
                 else:
                     rename_dict[col] = str(i)
         linkedin_df.rename(columns=rename_dict, inplace=True)
-
+        
         # Replace % relative data with actual numbers of followers
         for index, row in linkedin_df.iterrows():
             base_value = row['0']
@@ -335,19 +335,19 @@ def display_growth_data(df):
         st.dataframe(linkedin_df)
         # Line Graph
         st.subheader("LinkedIn Line Graph")
-
+        
         # Select only the columns with the calculated values
         line_graph_data = linkedin_df.drop(['Company Name', 'LinkedIn - URL'], axis=1)
         line_graph_data.index = linkedin_df['Company Name']
-
+                
         # Transpose the DataFrame to have months as columns
         line_graph_data = line_graph_data.transpose()
-
+        
         # Plot the line graph
         fig_line, ax_line = plt.subplots(figsize=(14, 6))
         for company in line_graph_data.columns:
             ax_line.plot(line_graph_data.index, line_graph_data[company], marker='o', label=company)
-
+           
         ax_line.set_title('Linked In Followers Over Time')
         ax_line.set_xlabel('Month (Relative)')
         ax_line.set_ylabel('LinkedIn Followers')
@@ -361,90 +361,95 @@ def main():
     """Main function for the Streamlit app."""
     st.title("Specter Data Analysis")
 
-    # Initialize session state variables
-    if 'df' not in st.session_state:
-        st.session_state.df = None
-    if 'df_original' not in st.session_state:
-        st.session_state.df_original = None
-    if 'shareable_url' not in st.session_state:
-        st.session_state.shareable_url = None
-    if 'data_source' not in st.session_state:
-        st.session_state.data_source = None
-    if 'query_params' not in st.session_state:
-        st.session_state.query_params = st.query_params.to_dict()
+    # Get query parameters
+    query_params = st.query_params
+    google_drive_url = query_params.get("google_drive_url")
 
-    # Data Loading Section
-    st.sidebar.header("Data Loading")
-    google_drive_url_input = st.sidebar.text_input("Google Drive URL:", value=st.session_state.query_params.get("google_drive_url", ""))
-    uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type=["csv"])
+    # Input for Google Drive URL
+    google_drive_url_input = st.text_input("Or, enter a Google Drive URL:", value=google_drive_url if google_drive_url else "")
 
     if google_drive_url_input:
-        if st.sidebar.button("Load from Google Drive"):
-            st.session_state.data_source = f"Google Drive: {google_drive_url_input}"
-            st.session_state.query_params["google_drive_url"] = google_drive_url_input
-            try:
-                # Extract the file ID from the Google Drive URL
-                file_id = google_drive_url_input.split('/d/')[1].split('/')[0]
-                # Construct the direct download URL
-                download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-                # Download the file content
-                response = requests.get(download_url)
-                response.raise_for_status()  # Raise an exception for bad status codes
-                # Load the data from the downloaded content
-                st.session_state.df, st.session_state.df_original = load_and_clean_data(BytesIO(response.content))
-                st.success("Data loaded successfully from Google Drive.")
-            except Exception as e:
-                st.error(f"Error loading data from Google Drive: {e}")
-                st.session_state.df = None
-                st.session_state.df_original = None
-    elif uploaded_file:
-        st.session_state.data_source = f"Uploaded File: {uploaded_file.name}"
-        st.session_state.query_params.pop("google_drive_url", None)
-        st.session_state.uploaded_file = uploaded_file
-        st.session_state.df, st.session_state.df_original = load_and_clean_data(StringIO(uploaded_file.getvalue().decode("utf-8")))
-        st.success("Data loaded successfully from uploaded file.")
-    
-    if st.session_state.df is not None:
-        app_url = "https://spectercompare.streamlit.app"
-        st.session_state.shareable_url = f"{app_url}?{urllib.parse.urlencode(st.session_state.query_params)}"
+        st.write("Attempting to load data from Google Drive URL...")
+        try:
+            # Extract the file ID from the Google Drive URL
+            file_id = google_drive_url_input.split('/d/')[1].split('/')[0]
+            
+            # Construct the direct download URL
+            download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            
+            # Download the file content
+            response = requests.get(download_url)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            
+            # Load the data from the downloaded content
+            df, df_original = load_and_clean_data(BytesIO(response.content))
+            
+            st.success("Data loaded successfully from Google Drive.")
+            
+            # Update the query parameters with the Google Drive URL
+            query_params["google_drive_url"] = google_drive_url_input
+            
+            # Display the shareable URL
+            #current_url = st.experimental_get_query_params()
+            app_url = "https://spectercompare.streamlit.app"
+            shareable_url = f"{app_url}?{urllib.parse.urlencode(query_params)}"
+  
+ #           shareable_url = f"{st.secrets['app_url']}?{urllib.parse.urlencode(current_url)}"
+            st.write(f"Shareable URL: {shareable_url}")
+        except Exception as e:
+            st.error(f"Error loading data from Google Drive: {e}")
+            df = None
+            df_original = None
 
-    # Main Panel Content
-    if st.session_state.data_source:
-        st.write(f"Data Source: {st.session_state.data_source}")
-        st.write(f"Shareable URL: {st.session_state.shareable_url}")
     else:
-        st.write("Please load data from Google Drive or upload a CSV file to begin.")
+        st.write("Upload your data file and then select what data you want to see from the sidebar menu.")
+        st.write("You can see all the data Specter holds on a given company (Raw Data), summary data by company (Company Data), but also comparative graphs for Web/LinkedIn (Web and LinkedIn Data) and various graphs for Specter populalarity (Popularity) and others (Graphs)")
+        
+        # File upload
+        uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+        if uploaded_file is not None:
+            # Directly use StringIO for the uploaded file
+            df, df_original = load_and_clean_data(StringIO(uploaded_file.getvalue().decode("utf-8")))
+            
+            # Store the uploaded file in session state
+            st.session_state.uploaded_file = uploaded_file
+            
+            # Clear the google_drive_url from the query params if a file is uploaded
+            if "google_drive_url" in query_params:
+                del query_params["google_drive_url"]
 
-    if st.session_state.df is not None:
+        else:
+            df = None
+            df_original = None
+
+    if df is not None:
         # Sidebar menu
         menu = ["Interactive Table", "Raw Data", "Company Data", "Popularity", "Web and LinkedIn Data", "Graphs"]
         choice = st.sidebar.selectbox("Select an option:", menu)
 
         if choice == "Interactive Table":
-            st.subheader("Interactive Table")
-            interactive_table_df = display_interactive_table(st.session_state.df)
+            st.subheader("Interactive Table")    
+            interactive_table_df = display_interactive_table(df)
             # --- Shareable Link and Data ---
             if 'uploaded_file' in st.session_state:
-
+                
                 # Create a download link for the uploaded file
                 csv = st.session_state.uploaded_file.getvalue().decode("utf-8")
                 b64 = base64.b64encode(csv.encode()).decode()  # Encode to base64
                 href = f'<a href="data:file/csv;base64,{b64}" download="data.csv">Download Uploaded Data</a>'
                 st.markdown(href, unsafe_allow_html=True)
-
+                
                 # Create a link to the app with the uploaded file
                 app_link = f"{st.secrets['app_url']}?uploaded_file={st.session_state.uploaded_file.name}"
-
+                
                 # Create a button to generate the shareable page
                 if st.button("Generate Shareable Page"):
                     # Generate the HTML for the shareable page
                     shareable_html = generate_shareable_page(interactive_table_df, st.session_state.uploaded_file, app_link)
-
+                    
                     # Display the shareable page in a new tab
-                    st.markdown(
-                        f'<a href="data:text/html;charset=utf-8,{shareable_html}" target="_blank">Open Shareable Page</a>',
-                        unsafe_allow_html=True)
-
+                    st.markdown(f'<a href="data:text/html;charset=utf-8,{shareable_html}" target="_blank">Open Shareable Page</a>', unsafe_allow_html=True)
+                    
                     # Display the shareable page in a text area
                     st.text_area("Shareable Page HTML", shareable_html, height=300)
 
@@ -462,38 +467,39 @@ def main():
 
                     os.remove(tmp_file_path)
 
+
         elif choice == "Popularity":
             st.subheader("Popularity (as measured by Specter) vs Funding bubble plot")
-            display_bubble_plot(st.session_state.df)
+            display_bubble_plot(df)
         elif choice == "Web and LinkedIn Data":
             st.subheader("Web, LinkedIn and Twitter Data")
-            plot_sorted_bar_chart(st.session_state.df, 'Web Visits', 'Web Visits by Company (Relative Percentage)', 'green')
-            plot_sorted_bar_chart(st.session_state.df, 'LinkedIn - Followers', 'LinkedIn Followers by Company (Relative Percentage)', 'blue')
-            plot_sorted_bar_chart(st.session_state.df, 'Twitter - Followers', 'Twitter Followers by Company (Relative Percentage)', 'orange')
-            display_growth_data(st.session_state.df_original)
+            plot_sorted_bar_chart(df, 'Web Visits', 'Web Visits by Company (Relative Percentage)', 'green')
+            plot_sorted_bar_chart(df, 'LinkedIn - Followers', 'LinkedIn Followers by Company (Relative Percentage)', 'blue')
+            plot_sorted_bar_chart(df, 'Twitter - Followers', 'Twitter Followers by Company (Relative Percentage)', 'orange')
+            display_growth_data(df_original)
         elif choice == "Graphs":
-            display_correlation_graphs(st.session_state.df)
+            display_correlation_graphs(df)
         elif choice == "Company Data":
             st.subheader("Company Data")
-            display_company_data(st.session_state.df)
+            display_company_data(df)
         elif choice == "Raw Data":
             st.subheader("Raw Data")
-            if st.session_state.df_original is not None:
-                display_raw_data(st.session_state.df_original)
+            if df_original is not None:
+                display_raw_data(df_original)
             else:
                 st.error("Original Data not available")
 
 def generate_shareable_page(df, uploaded_file, app_link):
     """Generates the HTML for the shareable page."""
-
+    
     # Convert the DataFrame to HTML
     table_html = df.to_html(index=False, escape=False)
-
+    
     # Create a download link for the uploaded file
     csv = uploaded_file.getvalue().decode("utf-8")
-    #    b64 = base64.b64encode(csv.encode()).decode()  # Encode to base64
-    #    download_link = f'<a href="data:file/csv;base64,{b64}" download="data.csv">Download Uploaded Data</a>'
-
+#    b64 = base64.b64encode(csv.encode()).decode()  # Encode to base64
+#    download_link = f'<a href="data:file/csv;base64,{b64}" download="data.csv">Download Uploaded Data</a>'
+    
     # Create the full HTML content
     html = f"""
     <!DOCTYPE html>
