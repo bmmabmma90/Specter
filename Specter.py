@@ -373,6 +373,9 @@ def main():
     if 'query_params' not in st.session_state:
         st.session_state.query_params = st.query_params.to_dict()
 
+    # Check for 'ex' parameter in the URL
+    is_ex_mode = st.session_state.query_params.get("ex") == "true"
+
     # Data Loading Section
     st.sidebar.header("Data Loading")
     google_drive_url_input = st.sidebar.text_input("Google Drive URL:", value=st.session_state.query_params.get("google_drive_url", ""))
@@ -406,14 +409,18 @@ def main():
     
     if st.session_state.df is not None:
         app_url = "https://spectercompare.streamlit.app"
+        # Add 'ex=true' to the shareable URL if it's not already there
+        if not is_ex_mode:
+            st.session_state.query_params["ex"] = "true"
         st.session_state.shareable_url = f"{app_url}?{urllib.parse.urlencode(st.session_state.query_params)}"
 
     # Main Panel Content
-    if st.session_state.data_source:
-        st.write(f"Data Source: {st.session_state.data_source}")
-        st.write(f"Shareable URL: {st.session_state.shareable_url}")
-    else:
-        st.write("Please load data from Google Drive or upload a CSV file to begin.")
+    if not is_ex_mode:
+        if st.session_state.data_source:
+            st.write(f"Data Source: {st.session_state.data_source}")
+            st.write(f"Shareable URL: {st.session_state.shareable_url}")
+        else:
+            st.write("Please load data from Google Drive or upload a CSV file to begin.")
 
     if st.session_state.df is not None:
         # Sidebar menu
