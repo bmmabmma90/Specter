@@ -375,8 +375,23 @@ def main():
 
     # Check for 'ex' parameter in the URL
     is_ex_mode = st.session_state.query_params.get("ex") == "true"
+    
+    if is_ex_mode :
+        google_drive_url_input = st.session_state.query_params.get("google_drive_url", "")
+        try:
+            # Extract the file ID from the Google Drive URL
+            file_id = google_drive_url_input.split('/d/')[1].split('/')[0]
+            # Construct the direct download URL
+            download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            # Download the file content
+            response = requests.get(download_url)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            # Load the data from the downloaded content
+            st.session_state.df, st.session_state.df_original = load_and_clean_data(BytesIO(response.content))
+        except Exception as e:
+            st.error(f"Error loading data from Google Drive: {e}")
 
-    if not is_ex_mode:
+    else :
         # Data Loading Section
         st.sidebar.header("Data Loading")
         google_drive_url_input = st.sidebar.text_input("Google Drive URL:", value=st.session_state.query_params.get("google_drive_url", ""))
@@ -407,7 +422,7 @@ def main():
             st.session_state.uploaded_file = uploaded_file
             st.session_state.df, st.session_state.df_original = load_and_clean_data(StringIO(uploaded_file.getvalue().decode("utf-8")))
             st.success("Data loaded successfully from uploaded file.")
-    
+
         if st.session_state.df is not None:
             app_url = "https://spectercompare.streamlit.app"
             # Add 'ex=true' to the shareable URL if it's not already there
@@ -415,13 +430,13 @@ def main():
                 st.session_state.query_params["ex"] = "true"
                 st.session_state.shareable_url = f"{app_url}?{urllib.parse.urlencode(st.session_state.query_params)}"
 
-        # Main Panel Content
-        if not is_ex_mode:
-            if st.session_state.data_source:
-                st.write(f"Data Source: {st.session_state.data_source}")
-                st.write(f"Shareable URL: {st.session_state.shareable_url}")
-            else:
-                st.write("Please load data from Google Drive or upload a CSV file to begin.")
+    # Main Panel Content
+    if not is_ex_mode:
+        if st.session_state.data_source:
+            st.write(f"Data Source: {st.session_state.data_source}")
+            st.write(f"Shareable URL: {st.session_state.shareable_url}")
+        else:
+            st.write("Please load data from Google Drive or upload a CSV file to begin.")
 
     if st.session_state.df is not None:
         # Sidebar menu
