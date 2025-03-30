@@ -376,7 +376,8 @@ def main():
     # Check for 'ex' parameter in the URL
     is_ex_mode = st.session_state.query_params.get("ex") == "true"
     
-    if is_ex_mode and st.session_state.df is not None:
+    # Only do this code where ex mode is set but the dataframe hasn't been loaded yet
+    if is_ex_mode and st.session_state.df is None:
         google_drive_url_input = st.session_state.query_params.get("google_drive_url", "")
         try:
             # Extract the file ID from the Google Drive URL
