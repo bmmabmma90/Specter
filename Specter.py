@@ -10,6 +10,8 @@ import base64
 import requests
 from io import BytesIO
 
+import urllib
+
 # --- Streamlit Configuration ---
 st.set_page_config(layout="wide")  # Make the window wide
 
