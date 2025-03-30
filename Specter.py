@@ -412,7 +412,7 @@ def main():
         # Add 'ex=true' to the shareable URL if it's not already there
         if not is_ex_mode:
             st.session_state.query_params["ex"] = "true"
-        st.session_state.shareable_url = f"{app_url}?{urllib.parse.urlencode(st.session_state.query_params)}"
+            st.session_state.shareable_url = f"{app_url}?{urllib.parse.urlencode(st.session_state.query_params)}"
 
     # Main Panel Content
     if not is_ex_mode:
